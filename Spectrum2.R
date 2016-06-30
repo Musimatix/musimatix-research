@@ -172,8 +172,6 @@ SampleRate = x1@samp.rate
 FinalSpectrum = SpectrumJoin(spectrum1, spectrum2, ShiftsPerFrame, SampleRate)
 
 
-# то, что дальше, не написано до конца
-#--------------------------------------
 
 
 NOTE<-vector()
