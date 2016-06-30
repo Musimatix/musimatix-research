@@ -171,7 +171,9 @@ spectrum2 = spectrum2/length(spectrum2)
 SampleRate = x1@samp.rate
 FinalSpectrum = SpectrumJoin(spectrum1, spectrum2, ShiftsPerFrame, SampleRate)
 
+#Дальше, на основе этого можно посчитать, например, фонограмму, которую уже и будем обучать
 
+#Тут просто вывод максимальной по ампитуде ноты
 
 
 NOTE<-vector()
@@ -212,6 +214,11 @@ for (i in 1:length(FinalSpectrum[,1]))
 qwerty[j] = floor((log2(z) - log2(27.5))*12)
 }
 #-----------------------конец цикла
+
+# то, что дальше, не написано до конца
+#--------------------------------------
+
+
 
 NOTE<-vector()
 NOTE[1] = qwerty[1]
