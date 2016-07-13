@@ -154,7 +154,7 @@ for ( i in 21:(length(magnitude)-5))
     if ((3*magnitude[i-5]<magnitude[i] | 3*magnitude[i-6]<magnitude[i] | 
         3*magnitude[i-7]<magnitude[i] | 3*magnitude[i-8]<magnitude[i] |
         3*magnitude[i-9]<magnitude[i] | 3*magnitude[i-10]<magnitude[i]) &&  #Условие на максимум
-        (3*magnitude[i+3] > magnitude[i])) #защита от одиночных пиков
+        (3*magnitude[i+3] > magnitude[i])) #защита от одиночных случайных пиков
     {
         if (magnitude[i] > locmax)
         {
@@ -197,4 +197,5 @@ for (i in 10:length(magnitude1))
         
     }
 
+#Список время/амплитуда
 steptime
