@@ -1,8 +1,8 @@
 library(tuneR)
 library(seewave)
 epsilon = 0.0000001
-setwd ("/Users/Kondor/Desktop/Music/FromC#")
-x1 = readWave("L3.wav")
+setwd ("/Users/Kondor/Desktop/Music/FromC#/korpus")
+x1 = readWave("Tolya-Rodina-kuplet.wav")
 x1 = updateWave(x1)
 #x1 = x1[1:(length(x1)/3)]
 #размер окна 50мс
@@ -292,27 +292,31 @@ words
 q2 = Sys.time()
 #оставим только сигнал слова
 signal = x1@left
-step = 1
-for (i in 1:length(signal))
-{
-    if (step <= length(words))
-    if ( i < words[step]*windowlen*x1@samp.rate) #less than begin of word
-    {
-        signal [i] = 0
-    } else
-    {
-        if (i > words[step+1]*windowlen*x1@samp.rate) #end of the word
-            step = step+2
-    }
-    
-}
+#step = 1
+#for (i in 1:length(signal))
+#{
+#    if (step <= length(words))
+#    if ( i < words[step]*windowlen*x1@samp.rate) #less than begin of word
+#    {
+#        signal [i] = 0
+#    } else
+#    {
+#        if (i > words[step+1]*windowlen*x1@samp.rate) #end of the word
+#            step = step+2
+#    }
+#    
+#}
 
 q3 = Sys.time()
-wlen = 0.02*x1@samp.rate
+wlen = 0.01*x1@samp.rate
 step = wlen/2
-for (j in 2:2)
+pause = matrix(10000,1000,2) #подумать!!!!!!!!!!!!!!!!!!!!!!!!
+t = 1
+for (j in 1:(length(words)/2))
 {
-    #смотрим пятисотые
+    #начала слов
+    pause[t] = (words[2*j-1]*windowlen*x1@samp.rate)
+    t = t+1
     #нормируем
     wsignal = signal[(words[2*j-1]*windowlen*x1@samp.rate):(words[2*j]*windowlen*x1@samp.rate)]
     wsignal = wsignal/max(wsignal)
@@ -337,9 +341,24 @@ for (j in 2:2)
             }
         }
     }
+    for (i in 1:(NumFrames-20))
+    {
+            if ( fh[i]<10 && mean(fh[(i+1):(i+20)]) > 10) #условие на паузу перед пиком
+            {
+                    if ((i*step + step)*windowlen*x1@samp.rate - pause[t-1]<20)
+                    {
+                        pause[t-1] = (i*step + step)*windowlen*x1@samp.rate
+                    } else
+                    {
+                        pause[t] = (i*step + step)*windowlen*x1@samp.rate
+                        t = t+1
+                    }
+            }
+    }
+
 }
 plot(fh,type = 'h')
-
+head(pause)
 q4 = Sys.time()
 q0
 q1
