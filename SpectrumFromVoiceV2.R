@@ -2,12 +2,12 @@ library(tuneR)
 library(seewave)
 epsilon = 0.0000001
 setwd ("/Users/Kondor/Desktop/Music/FromC#")
-x1 = readWave("11.wav")
+x1 = readWave("L3.wav")
 x1 = updateWave(x1)
-
+#x1 = x1[1:(length(x1)/3)]
 #размер окна 50мс
 #шаг спектра 25мс
-
+q0 = Sys.time()
 
 #Посчитаем энергию сигнала
 #signal - исходный сигнал
@@ -73,7 +73,7 @@ Centroid = function (signal,wlen,step)
 }
 
 windowlen = 0.05
-steplen = windowlen/2
+steplen = windowlen
 
 E = Energy(x1@left,windowlen*x1@samp.rate,steplen*x1@samp.rate)*100
 
@@ -102,8 +102,8 @@ for (i in 6:length(E))
                 }
         }
     }
-plot(E,type = 'l')
-points(steptime)
+#plot(E,type = 'l')
+#points(steptime)
 
 
 #steptime[1:countlocmax,] = steptime[1:countlocmax,] * steplen
@@ -250,7 +250,7 @@ for (j in 0:(floor(min)-1))
 beatmin[,1] = beatmin[,1] + beatmaxt
 
 points(beatmin,col = 'green',type = 'h')
-
+q1 = Sys.time()
 #--------------------------
 words = matrix(0,countlocmax)
 begin = 0
@@ -258,38 +258,91 @@ step = 1
 #Выделение слов
 for ( i in 1:length(E))
 {
-    if ((begin == 0) && (E[i]>0.25)) #начало возможного слова
+    if ((begin == 0) && (E[i]>0.1)) #начало возможного слова
     {
-        begin = i
+        if (step != 1){
+        if (i - words[step-1] > 5) #previous end too close to new begin
+        {
+            begin = i
+        } else
+        {
+            words[step-1] = i
+        }
+        } else
+        {
+            begin = i
+        }
     }
-    if ((begin != 0) && (i-begin > 30) && (E[i]<0.25)) #end of the word
+    if ((begin != 0) && (i-begin > 10) && (E[i]<0.1)) #end of the word
     {
         words[step] = begin
         words[step+1] = i-1
         begin = 0
         step = step + 2
     }
-    if ((begin != 0) && (i-begin < 30) && (E[i]<0.25)) #too short word
-        begin = 0
+    #if ((begin != 0) && (i-begin < 10) && (E[i]<0.1)) #too short word
+    #    begin = 0
 }
-#points(words)
-wordf = matrix(0,length(words),2)
+words = words[words != 0]
+wordf = matrix(12,length(words),2)
 wordf[,1] = words
-points(wordf)
-words = words[1:(step-1)]
+points(wordf,type = 'h')
 words
 #Анализ слов по отдельности
-if (sum(words) != 0){
-for ( i in 1:(length(words)/2))
+q2 = Sys.time()
+#оставим только сигнал слова
+signal = x1@left
+step = 1
+for (i in 1:length(signal))
 {
-    k = i*2
-    d = matrix(0,(words[k]-words[k-1]-1))
-    step = 1
-    for (j in (words[k-1]+1):words[k])
+    if (step <= length(words))
+    if ( i < words[step]*windowlen*x1@samp.rate) #less than begin of word
     {
-        d[step] = (E[j]-E[j-1])/2
-        step = step+1
+        signal [i] = 0
+    } else
+    {
+        if (i > words[step+1]*windowlen*x1@samp.rate) #end of the word
+            step = step+2
     }
-    #plot(d,type = 'h')
     
-}}
+}
+
+q3 = Sys.time()
+wlen = 0.02*x1@samp.rate
+step = wlen/2
+for (j in 2:2)
+{
+    #смотрим пятисотые
+    #нормируем
+    wsignal = signal[(words[2*j-1]*windowlen*x1@samp.rate):(words[2*j]*windowlen*x1@samp.rate)]
+    wsignal = wsignal/max(wsignal)
+    len = length(wsignal)
+    pos = 1
+    #Число фреймов
+    NumFrames = floor((len-wlen)/step) + 1
+    fh = matrix(0,NumFrames,1) #пятисотая
+    for (i in 1:NumFrames)
+    {
+        window = wsignal[pos:(pos+wlen-1)]
+        pos = pos + step
+        x = fft(window)
+        bin = x1@samp.rate/length(x)
+        st = 0
+        for (k in 1:(length(x)/2))
+        {
+            st = st + bin
+            if (abs(st-500) < 200 )
+            {
+                fh[i] = abs(x[k])
+            }
+        }
+    }
+}
+plot(fh,type = 'h')
+
+q4 = Sys.time()
+q0
+q1
+q2
+q3
+q4
