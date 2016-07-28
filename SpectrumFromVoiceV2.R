@@ -284,8 +284,8 @@ for ( i in 1:length(E))
     #    begin = 0
 }
 words = words[words != 0]
-wordf = matrix(12,length(words),2)
-wordf[,1] = words
+wordf = matrix(-20000,length(words),2)
+wordf[,1] = words*windowlen*x1@samp.rate
 points(wordf,type = 'h')
 words
 #Анализ слов по отдельности
@@ -307,15 +307,39 @@ signal = x1@left
 #    
 #}
 
+#нужно 15 с фш меньше 5 ,можно пару исключкний
+# number of frame, fh - magnitude ~500hz
+fhbool1 = function(i,fh)
+{
+    poss = 0
+    for (k in 1:10)
+    if (fh[i] < (1*mean(fh)/3) && fh[i-1] < (mean(fh)) && fh[i-2] < (mean(fh)) 
+    && fh[i-3] < (mean(fh)) && fh[i-4] < (mean(fh)) && fh[i-5] < (mean(fh))
+    && (abs((fh[i+5+k]-mean(fh))/(fh[i]-mean(fh))) > 0.1)
+    && (fh[i+5+k]-fh[i] > 10) )
+        poss = poss + 1
+        
+    if (poss > 0)
+    {
+        #print (i)
+        return (TRUE)
+    } else
+    {
+        return (FALSE)
+    }
+}
+
+
 q3 = Sys.time()
 wlen = 0.01*x1@samp.rate
 step = wlen/2
-pause = matrix(10000,1000,2) #подумать!!!!!!!!!!!!!!!!!!!!!!!!
+pause = matrix(30000,1000,2) #подумать!!!!!!!!!!!!!!!!!!!!!!!!
 t = 1
 for (j in 1:(length(words)/2))
+#for (j in 2:2)
 {
     #начала слов
-    pause[t] = (words[2*j-1]*windowlen*x1@samp.rate)
+    pause[t,1] = (words[2*j-1]*windowlen*x1@samp.rate)
     t = t+1
     #нормируем
     wsignal = signal[(words[2*j-1]*windowlen*x1@samp.rate):(words[2*j]*windowlen*x1@samp.rate)]
@@ -324,7 +348,7 @@ for (j in 1:(length(words)/2))
     pos = 1
     #Число фреймов
     NumFrames = floor((len-wlen)/step) + 1
-    fh = matrix(0,NumFrames,1) #пятисотая
+    fh = matrix(0,NumFrames) #пятисотая
     for (i in 1:NumFrames)
     {
         window = wsignal[pos:(pos+wlen-1)]
@@ -341,27 +365,50 @@ for (j in 1:(length(words)/2))
             }
         }
     }
-    for (i in 1:(NumFrames-20))
+    #просто удобная нормировка
+    #fh = log (fh+1)
+    fh1 = fh
+    for (i in 3:(length(fh)-2))
+         fh1[i]=1/5 * (fh[i-2]+fh[i-1]+fh[i]+fh[i+1]+fh[i+2])
+    fh=fh1
+    for (i in 6:(NumFrames-15))
     {
-            if ( fh[i]<10 && mean(fh[(i+1):(i+20)]) > 10) #условие на паузу перед пиком
-            {
-                    if ((i*step + step)*windowlen*x1@samp.rate - pause[t-1]<20)
+            if ( fhbool1(i,fh) == T)
+                 #&& (fhbool2(i,fh) == TRUE))#условие на паузу перед пиком
+                {
+                    if (((words[2*j-1]*windowlen*x1@samp.rate)+(i*step + step) - pause[t-1])>0.1*x1@samp.rate)
                     {
-                        pause[t-1] = (i*step + step)*windowlen*x1@samp.rate
-                    } else
-                    {
-                        pause[t] = (i*step + step)*windowlen*x1@samp.rate
+                        pause[t,1] = (words[2*j-1]*windowlen*x1@samp.rate)+(i*step + step)
                         t = t+1
                     }
+                
             }
+        
     }
+    #print (mean(fh))
+    plot(fh,type = 'h')
+    abline(mean(fh),0)
+    #end слов
+    #pause[t,1] = (words[2*j]*windowlen*x1@samp.rate)
+    #t = t+1
 
 }
-plot(fh,type = 'h')
-head(pause)
+
+
+
+
 q4 = Sys.time()
 q0
 q1
 q2
 q3
 q4
+plot(fh,type = 'h')
+abline(mean(fh),0)
+head(pause)
+plot(signal,type = 'l')
+points(wordf,col = 'green',type = 'h')
+points(pause,type = 'h',col = 'red')
+
+
+# Можно взять слово, выикнуть очень длиннй слог, если слог сильно короче медианы остатка - сливаем
