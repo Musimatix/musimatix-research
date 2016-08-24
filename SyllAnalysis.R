@@ -4,9 +4,7 @@ epsilon = 0.0000001
 setwd ("/Users/Kondor/Desktop/Music/FromC#/korpus")
 x1 = readWave("Tolya-Rodina-pripev.wav")
 x1 = updateWave(x1)
-#x1 = x1[1:(length(x1)/3)]
-#размер окна 50мс
-#шаг спектра 25мс
+
 q0 = Sys.time()
 
 
@@ -50,7 +48,7 @@ windowlen = 0.05
 steplen = windowlen
 
 E = Energy(x1@left,windowlen*x1@samp.rate,steplen*x1@samp.rate)*100
-
+Ewindowlen = windowlen*x1@samp.rate
 #Смотрим слоги
 countlocmax = 0
 locmaxi = 0
@@ -246,44 +244,51 @@ fhbool1 = function(i,fh)
 
 minmax = function (fhi)
 {
-    minimax = matrix(0,(length(fh)/10))
+    minimax = matrix(1,(length(fh)/10))
     steps = 1
     #распознавание последнего пика так как после может не быть спада спада
-    fh = rep (0,(length(fh)+15))
+    fh = rep (0,(length(fhi)+15))
     for (i in 1:(length(fhi)))
          fh[i] = fhi[i]
-    
-    for (i in 6:(length(fh)-5))
+    # Условие на макс
+    print (fh)
+    for (i in 6:(length(fhi)-5))
     {
         if (fh[i]>fh[i-1] &&fh[i]>fh[i-2] &&fh[i]>fh[i-3] &&fh[i]>fh[i-4] &&fh[i]>fh[i-5] &&
             fh[i]>fh[i+1] &&fh[i]>fh[i+2] &&fh[i]>fh[i+3] &&fh[i]>fh[i+4] &&fh[i]>fh[i+5] )
         {
             minimax[steps] = i
-            steps = steps + 2
+            steps = steps + 1
         }
     }
-    steps = 2
-    for (i in 6:(length(fh)-5))
+    # Условие на мин
+    for (i in 6:(length(fhi)-5))
     {
-        if (fh[i]<fh[i-1] &&fh[i]<fh[i-2] &&fh[i]<fh[i-3] &&fh[i]<fh[i-4] &&fh[i]<fh[i-5] &&
-            fh[i]<fh[i+1] &&fh[i]<fh[i+2] &&fh[i]<fh[i+3] &&fh[i]<fh[i+4] &&fh[i]<fh[i+5] )
+        if (fh[i]<= fh[i-1] &&fh[i] <= fh[i-2] &&fh[i] <= fh[i-3] &&fh[i] <= fh[i-4] &&fh[i] <= fh[i-5] &&
+            fh[i] <= fh[i+1] &&fh[i] <= fh[i+2] &&fh[i] <= fh[i+3] &&fh[i] <= fh[i+4] &&fh[i] <= fh[i+5] 
+            && (fh[i+1]>epsilon)
+        )
         {
             minimax[steps] = i
-            steps = steps + 2
+            steps = steps + 1
         }
     }
-    return (minimax[minimax != 0])
+    #minimax = minimax + 6
+    print (minimax)
+    return (minimax)
 }
 
 convex = function (minmaxii,fh,d)
 {
-    convexi = matrix (0,(length(a)/2))
+    convexi = matrix (0,(length(minmaxii)/2))
     
     #min of minmax
-    locmin = max(minmaxii)
+    locmin = max(fh[minmaxii],na.rm = T)
     locmini = 1
-    for (i in 1:length(minmaxii))
+
+    for (i in 1:(length(minmaxii)))
     {
+       
         if (fh[minmaxii[i]]< locmin)
         {
             locmin = fh[minmaxii[i]]
@@ -310,9 +315,8 @@ convex = function (minmaxii,fh,d)
     }
     steps = 1
     locmax = max(fh[minmaxii[-locmaxi]])/3
-    #locmax = min (fh) + max(fh[minmaxii[-locmaxi]])/10
-    #print(locmaxi)
-    for (i in ((floor(length(minmaxii)))+1):((floor(length(minmaxii)*3))))
+    #бегаем по значимым точкам массива с краями 
+    for (i in ((floor(length(minmaxii)))+1):((floor(length(minmaxi)-length(minmaxii)))))
     {
         #if (
             #(fh[minmaxi[i]] - fh[minmaxi[i+1]] > d) && ((fh[minmaxi[i]] - fh[minmaxi[i-1]] > d)) |
@@ -345,6 +349,7 @@ convex = function (minmaxii,fh,d)
             
         #)
         par = 0
+        
         for (l in (-floor(length(minmaxii))):(-1))
         {
             for (ll in 1:(floor(length(minmaxii)))){
@@ -352,7 +357,8 @@ convex = function (minmaxii,fh,d)
                 if ((fh[minmaxi[i]] > locmax) &&
                     (max(fh[minmaxi[(i+l):(i-1)]]) < fh[minmaxi[i]]) && (max(fh[minmaxi[(i+1):(i+ll)]]) < fh[minmaxi[i]] ) &&
                     (min(fh[minmaxi[(i+l):(i-1)]]) < locmax) && ( min(fh[minmaxi[(i+1):(i+ll)]])< locmax) &&
-                    (abs(min(fh[minmaxi[(i+l):(i-1)]]) - fh[minmaxi[i]]) > locmax/4) && ( abs(min(fh[minmaxi[(i+1):(i+ll)]]) - fh[minmaxi[i]]) > locmax/4) 
+                    (abs(min(fh[minmaxi[(i+l):(i-1)]]) - fh[minmaxi[i]]) > locmax) && ( abs(min(fh[minmaxi[(i+1):(i+ll)]]) - fh[minmaxi[i]]) > locmax) &&
+                    (fh[minmaxi[(i+l)]] < locmax/2) && (fh[minmaxi[(i+ll)]] < locmax/2)
                 )
                 {
                     par = 1
@@ -364,7 +370,6 @@ convex = function (minmaxii,fh,d)
             steps = steps +1
         } 
     }
-    #print (convexi)
     return(convexi[convexi !=0 ])
 }
 
@@ -373,8 +378,19 @@ wlen = 0.01*x1@samp.rate
 step = wlen/2
 pause = matrix(30000,1000,2) #подумать!!!!!!!!!!!!!!!!!!!!!!!!
 t = 1
+
+#Рассматриваем только участки с большой энергией, что бы не было шумов
+for ( i in 1:(length(signal)-Ewindowlen))
+{
+    #print (E[floor(i/Ewindowlen)+1])
+    if (E[floor(i/Ewindowlen)+1]< (max(E)/10)) #!!!!!!!!!!!!!!!!!!!  подобрать коэфф!!
+    {
+        signal[i] = 0
+    }
+}
+
 #for (j in 1:(length(words)/2))
-for (j in 2:2)
+for (j in 3:3)
 {
     #начала слов
     pause[t,1] = (words[2*j-1]*windowlen*x1@samp.rate)
@@ -426,17 +442,6 @@ for (j in 2:2)
         }
     }}
     
-    
-    
-    
-    
-    #print (mean(fh))
-    #plot(fh,type = 'h')
-    #abline(mean(fh),0)
-    #end слов
-    #pause[t,1] = (words[2*j]*windowlen*x1@samp.rate)
-    #t = t+1
-    
 }
 
 q4 = Sys.time()
@@ -462,7 +467,7 @@ bb = convex(aa,fh[20:(length(fh)-20)],0.2)
 cc = matrix(2, length(bb),2)
 
 cc[,1]=bb
-cc[,2] = 4
+cc[,2] = 8
 
 dd = matrix(2, length(aa),2)
 dd[,1]=aa
